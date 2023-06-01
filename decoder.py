@@ -49,8 +49,6 @@ class RTIDS_Decoder(nn.Module):
         self.norm = RTIDS_Norm(d_model)
 
     def forward(self, trg, e_outputs, mask = None):
-        print(trg)
-        print(e_outputs.size())
         x = self.embed(trg)
         x = self.pe(x)
         for i in range(self.N):

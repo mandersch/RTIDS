@@ -33,7 +33,7 @@ def train_model(model, opt, epochs, data, mask, print_every=100):
             loss.backward()
             opt.step()
             
-            total_loss += loss.data[0]
+            total_loss += loss.data 
             if (i + 1) % print_every == 0:
                 loss_avg = total_loss / print_every
                 print("time = %dm, epoch %d, iter = %d, loss = %.3f, \

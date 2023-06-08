@@ -24,7 +24,7 @@ class RTIDS_Positional_Encoder(nn.Module):
         seq_len = x.size(1)
         # print(x.size())
         # print("PE-size: ", self.pe.size())
-        y = Variable(self.pe[:,:seq_len],requires_grad=False)
+        y = Variable(self.pe[:,:seq_len],requires_grad=False).cuda()
         # print("Y-Var size: ",y.size())
         # print(y.size())
         x = x + y #.cuda()

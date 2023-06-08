@@ -18,10 +18,10 @@ class RTIDS_Decoder_Layer(nn.Module):
         self.norm_3 = RTIDS_Norm(d_model)
         self.attn = RTIDS_Multi_Head_Attention(heads, d_model, dropout)
         self.msk_attn = RTIDS_Multi_Head_Attention(heads, d_model, dropout)
-        self.feedf = RTIDS_FeedForward(d_model)
-        self.dropout_1 = nn.Dropout(dropout)
-        self.dropout_2 = nn.Dropout(dropout)
-        self.dropout_3 = nn.Dropout(dropout)
+        self.feedf = RTIDS_FeedForward(d_model).cuda()
+        self.dropout_1 = nn.Dropout(dropout).cuda()
+        self.dropout_2 = nn.Dropout(dropout).cuda()
+        self.dropout_3 = nn.Dropout(dropout).cuda()
 
     def forward(self, x, e_outputs, mask):
         x2 = self.norm_1(x)

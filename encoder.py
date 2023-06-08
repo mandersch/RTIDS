@@ -15,9 +15,9 @@ class RTIDS_Encoder_Layer(nn.Module):
         self.norm_1 = RTIDS_Norm(d_model)
         self.norm_2 = RTIDS_Norm(d_model)
         self.attn = RTIDS_Multi_Head_Attention(heads, d_model, dropout)
-        self.feedf = RTIDS_FeedForward(d_model)
-        self.dropout_1 = nn.Dropout(dropout)
-        self.dropout_2 = nn.Dropout(dropout)
+        self.feedf = RTIDS_FeedForward(d_model).cuda()
+        self.dropout_1 = nn.Dropout(dropout).cuda()
+        self.dropout_2 = nn.Dropout(dropout).cuda()
 
     def forward(self, x, mask):
         x2 = self.norm_1(x)

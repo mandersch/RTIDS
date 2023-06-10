@@ -91,8 +91,13 @@ def main():
     summary(model)
     
     optim = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    path = "pretrained/pretrained.pt"
+    if os.path.exists(path):
+        state = torch.load(path)
+        model.load_state_dict(state["model_state_dict"])
 
-    # train_model(model, optim, epochs, train_loader, mask)
+
+    train_model(model, optim, epochs, train_loader, mask)
     eval_model(model, val_loader, "pretrained/pretrained.pt")
 
 if __name__ == "__main__":

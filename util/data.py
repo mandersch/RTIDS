@@ -6,7 +6,9 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import NearestNeighbors
+from sklearn.utils import shuffle
 from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
 import os
 
 # Define custom dataset class
@@ -55,27 +57,55 @@ def load_data():
         features = features.where(features <= max_float64, max_float64)
         labels = data['Label']
         data = pd.concat([features, labels], axis=1)
-        # print("Beginning SMOTE")
-        # # Split the dataset by label
-        # benign_data = data[data['Label'] == 'Benign']
-        # attack_data = data[data['Label'] != 'Benign']
-
-        # # Create a nearest neighbor estimator with n_jobs
-        # nn_estimator = NearestNeighbors(n_neighbors=5, n_jobs=-1)
-
-        # # Apply SMOTE to the subset containing the minority classes
-        # smote = SMOTE(random_state=42, k_neighbors=nn_estimator)
-        # features_minority, labels_minority = smote.fit_resample(attack_data.drop('Label', axis=1), attack_data['Label'])
-
-        # # Combine the majority class (benign_data) with the oversampled minority class
-        # balanced_data = pd.concat([benign_data, pd.DataFrame(features_minority, columns=attack_data.drop('Label', axis=1).columns)], axis=0)
-        # balanced_data['Label'] = pd.concat([benign_data['Label'], pd.Series(labels_minority)])
-
-        # print("SMOTE Done")
 
         # Encode Labels
         print("Encoding Labels")
         data['Label'] = data['Label'].apply(lambda x: 'Attack' if x != 'BENIGN' else x)
+
+        print("Beginning SMOTE")
+
+
+        # Separate features and labels
+        features = data.drop('Label', axis=1)
+        labels = data['Label']
+
+        features, labels = shuffle(features, labels, random_state=42)
+
+        # Define the incremental SMOTE parameters
+        nn_estimator = NearestNeighbors(n_neighbors=5, n_jobs=-1)
+        smote = SMOTE(k_neighbors=nn_estimator, random_state=42)
+        under_sampler = RandomUnderSampler(sampling_strategy=0.4, random_state=42)
+        batch_size = 10000
+
+        # Create empty arrays to store balanced data
+        balanced_features = np.empty((0, features.shape[1]))
+        balanced_labels = np.empty((0,))
+
+        # Perform incremental SMOTE
+        for i in range(0, features.shape[0], batch_size):
+            # Get a batch of samples
+            batch_features = features[i:i+batch_size]
+            batch_labels = labels[i:i+batch_size]
+
+            # Perform random undersampling on the combined samples
+            sampled_features, sampled_labels = under_sampler.fit_resample(batch_features, batch_labels)
+            
+            # Perform SMOTE on the batch
+            synthetic_features, synthetic_labels = smote.fit_resample(sampled_features, sampled_labels)
+
+            # Combine the sampled data with previously balanced data
+            balanced_features = np.vstack((balanced_features, synthetic_features))
+            balanced_labels = np.concatenate((balanced_labels, synthetic_labels))
+
+        # Shuffle the balanced data
+        balanced_features, balanced_labels = shuffle(balanced_features, balanced_labels, random_state=42)
+
+        # Convert balanced data back to pandas DataFrame
+        balanced_data = pd.DataFrame(data=balanced_features, columns=features.columns)
+        balanced_data['Label'] = balanced_labels
+        data = balanced_data
+        print("SMOTE Done")
+
         # Perform one-hot encoding and drop the original "Labels" column
         encoded_labels = pd.get_dummies(data['Label'], prefix='', prefix_sep='')
         data = pd.concat([data.drop('Label', axis=1), encoded_labels], axis=1)

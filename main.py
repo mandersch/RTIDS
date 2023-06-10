@@ -1,13 +1,32 @@
-from torch import nn
 import torch
-import util
+from torch import nn
+from torch.autograd import Variable
 from torch.nn import functional as F
+from torchsummary import summary
+import numpy as np
+import time
+import os
 from util.masks import get_mask
 from util.data import load_data, get_data_loader
 from transformer import RTIDS_Transformer
-import time
-from torchsummary import summary
-import os
+
+def eval_model(model, loader, path = None):
+    if path is not None:
+        state = torch.load(path)
+        model.load_state_dict(state["model_state_dict"])
+    model.cuda()
+    model.eval()
+    losses = []
+    correct = 0
+    print("Evaluating Model")
+    with torch.no_grad():
+        for data, target in loader:
+            data, target = data.to("cuda"), target.to("cuda")
+            output = model(data)
+            losses.append(F.cross_entropy(output, target).item())
+            correct += torch.eq(torch.argmax(output, dim=1),torch.argmax(target, dim=1)).cpu().sum().item()
+    eval_loss = float(np.mean(losses))
+    print("Loss:", eval_loss, "Accuracy:", 100. * correct / len(loader.dataset))
 
 def train_model(model, opt, epochs, data, mask, print_every=100):
     model.cuda()
@@ -22,15 +41,14 @@ def train_model(model, opt, epochs, data, mask, print_every=100):
         for i, batch in enumerate(data):
             src,trg = batch
             src,trg = src.cuda(), trg.cuda()
-            src,trg = src.type(torch.LongTensor).cuda(), trg.type(torch.LongTensor).cuda()
             
-            trg_mask = mask
+            trg_mask = None# mask
             
-            preds = model(src, trg, trg_mask)
+            preds = model(src, trg_mask)
             
             opt.zero_grad()
             
-            loss = F.cross_entropy(preds.view(-1, preds.size(-1)), trg)
+            loss = F.cross_entropy(preds, trg)
             loss.backward()
             opt.step()
             
@@ -57,13 +75,15 @@ def main():
     d_model = 32
     heads = 8
     N = 6
-    src_vocab = 10000
-    trg_vocab = 15
-    mask = get_mask(src_vocab)
+    trg_vocab = 2
+    mask = get_mask(128)
+    
     train_data, val_data = load_data()
+    
     train_loader = get_data_loader(train_data, batch_size)
+    val_loader = get_data_loader(val_data, batch_size)
 
-    model = RTIDS_Transformer(src_vocab, src_vocab, d_model, N, heads, dropout_rate)
+    model = RTIDS_Transformer(trg_vocab, d_model, N, heads, dropout_rate)
 
     for p in model.parameters():
         if p.dim() > 1:
@@ -72,7 +92,8 @@ def main():
     
     optim = torch.optim.SGD(model.parameters(), lr=learning_rate)
 
-    train_model(model, optim, epochs, train_loader, mask)
+    # train_model(model, optim, epochs, train_loader, mask)
+    eval_model(model, val_loader, "pretrained/pretrained.pt")
 
 if __name__ == "__main__":
     main()

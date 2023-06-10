@@ -27,10 +27,10 @@ class RTIDS_Encoder_Layer(nn.Module):
         return x
     
 class RTIDS_Encoder(nn.Module):
-    def __init__(self, vocab_size, d_model, N, heads, dropout = 0.1):
+    def __init__(self, d_model, N, heads, dropout = 0.1):
         super().__init__()
         self.N = N
-        self.embed = RTIDS_Embedder(vocab_size, d_model)
+        self.embed = RTIDS_Embedder(d_model)
         self.pe = RTIDS_Positional_Encoder(d_model)
         self.layers = get_clones(RTIDS_Encoder_Layer(d_model, heads, dropout), N)
         self.norm = RTIDS_Norm(d_model)

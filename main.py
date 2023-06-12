@@ -61,16 +61,19 @@ def train_model(model, opt, epochs, data, mask, print_every=100):
                 print_every))
                 total_loss = 0
                 temp = time.time()
-    os.makedirs("pretrained")
-    state = {
-            'model_state_dict': model.state_dict(),
-        }
-    torch.save(state, "pretrained/pretrained.pt")
+        try:
+            os.mkdir("pretrained")
+        except OSError as error:
+            print(error) 
+        state = {
+                'model_state_dict': model.state_dict(),
+            }
+        torch.save(state, "pretrained/pretrained.pt")
 
 def main():
     learning_rate = 5e-4
     batch_size = 128
-    epochs = 1
+    epochs = 5
     dropout_rate = 0.5
     d_model = 32
     heads = 8
@@ -93,6 +96,7 @@ def main():
     optim = torch.optim.SGD(model.parameters(), lr=learning_rate)
     path = "pretrained/pretrained.pt"
     if os.path.exists(path):
+        print("Loadiing Pretrained Model")
         state = torch.load(path)
         model.load_state_dict(state["model_state_dict"])
 

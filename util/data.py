@@ -14,8 +14,8 @@ import os
 # Define custom dataset class
 class CICIDSDataset(Dataset):
     def __init__(self, data):
-        self.features = data[:, :-2]  # All columns except the last one
-        self.labels = data[:, -2:]  # Last column (labels)
+        self.features = data[:, :-2]  # All columns except the last ones
+        self.labels = data[:, -2:]  # Last columns (labels)
 
     def __len__(self):
         return len(self.labels)

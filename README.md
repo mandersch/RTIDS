@@ -8,7 +8,7 @@ It is recommended to download the [CICIDS2017](https://www.unb.ca/cic/datasets/i
 
 ## Requirements
 
-You will need to install PyTorch to run this Project. Currently Cuda is not yet supported, however this will likely be updated later on.
+You will need to install PyTorch to run this Project. Currently only Cuda is supported, however this will likely be updated later on.
 
 ## Usage
 

@@ -27,7 +27,7 @@ class RTIDS_Decoder_Layer(nn.Module):
         x2 = self.norm_1(x)
         x = x + self.dropout_1(self.msk_attn(x2,x2,x2,mask))
         x2 = self.norm_2(x)
-        x = x + self.dropout_2(self.attn(e_outputs,e_outputs,x2,mask=None))
+        x = x + self.dropout_2(self.attn(x2,e_outputs,e_outputs,mask=None))
         x2 = self.norm_3(x)
         x = x +self.dropout_3(self.feedf(x2))
         return x

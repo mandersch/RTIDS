@@ -10,10 +10,7 @@ from util.masks import get_mask
 from util.data import load_data, get_data_loader
 from transformer import RTIDS_Transformer
 
-def eval_model(model, loader, path = None):
-    if path is not None:
-        state = torch.load(path)
-        model.load_state_dict(state["model_state_dict"])
+def eval_model(model, loader):
     model.cuda()
     model.eval()
     losses = []
@@ -26,18 +23,34 @@ def eval_model(model, loader, path = None):
             losses.append(F.cross_entropy(output, target).item())
             correct += torch.eq(torch.argmax(output, dim=1),torch.argmax(target, dim=1)).cpu().sum().item()
     eval_loss = float(np.mean(losses))
-    print("Loss:", eval_loss, "Accuracy:", 100. * correct / len(loader.dataset))
+    eval_acc = 100. * correct / len(loader.dataset)
+    print("Loss:", eval_loss, "Accuracy:", eval_acc)
+    return eval_loss, eval_acc
 
-def train_model(model, opt, epochs, data, mask, print_every=100):
+def train_model(model, opt, epochs, data, eval_data, mask, print_every=100):
     model.cuda()
-    model.train()
+
+    path = "pretrained/pretrained.pt"
+    if os.path.exists(path):
+        print("Loading Pretrained Model")
+        state = torch.load(path)
+        model.load_state_dict(state["model_state_dict"])
+        start_epoch = state["epoch"] + 1
+        losses = state["ep_loss"]
+        accs = state["ep_acc"]
+        print("Starting at epoch", start_epoch, "with accuracy values", accs)
+    else:
+        start_epoch = 0
+        losses, accs = [], []
+
+
     start = time.time()
     temp = start
     
     total_loss = 0
     
-    for epoch in range(epochs):
-       
+    for epoch in range(start_epoch, epochs):
+        model.train()
         for i, batch in enumerate(data):
             src,trg = batch
             src,trg = src.cuda(), trg.cuda()
@@ -61,19 +74,25 @@ def train_model(model, opt, epochs, data, mask, print_every=100):
                 print_every))
                 total_loss = 0
                 temp = time.time()
+        ep_loss, ep_acc = eval_model(model,eval_data)
+        losses.append(ep_loss)
+        accs.append(ep_acc)
         try:
             os.mkdir("pretrained")
         except OSError as error:
             print(error) 
         state = {
                 'model_state_dict': model.state_dict(),
+                'epoch': epoch,
+                'ep_loss': losses,
+                'ep_acc': accs
             }
         torch.save(state, "pretrained/pretrained.pt")
 
 def main():
     learning_rate = 5e-4
     batch_size = 128
-    epochs = 5
+    epochs = 25
     dropout_rate = 0.5
     d_model = 32
     heads = 8
@@ -94,15 +113,9 @@ def main():
     summary(model)
     
     optim = torch.optim.SGD(model.parameters(), lr=learning_rate)
-    path = "pretrained/pretrained.pt"
-    if os.path.exists(path):
-        print("Loadiing Pretrained Model")
-        state = torch.load(path)
-        model.load_state_dict(state["model_state_dict"])
 
-
-    train_model(model, optim, epochs, train_loader, mask)
-    eval_model(model, val_loader, "pretrained/pretrained.pt")
+    train_model(model, optim, epochs, train_loader, val_loader, mask)
+    # eval_model(model, val_loader, "pretrained/pretrained.pt")
 
 if __name__ == "__main__":
     main()
